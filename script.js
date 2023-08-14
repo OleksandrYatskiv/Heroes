@@ -29,7 +29,9 @@ const selectedComics = document.querySelector('[data-name="heroComics"]');
 const favourite = document.querySelector('[data-name="heroFavourite"]');
 const table = document.querySelector('#heroesTable');
 const comicsSelect = document.querySelector('[data-name="heroComics"]');
+const form = document.querySelector('#heroesForm');
 
+const errContainer = document.createElement('div');
 const tbody = document.createElement('tbody');
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -41,9 +43,10 @@ addBtn.addEventListener('click', async (e) => {
     e.preventDefault();
 
     if (await IsInDatabase(name.value)) {
-        alert('This hero already exists.');
+        showErrMssg();
     } else {
-        addToDatabase(name.value, selectedComics.value, favourite.checked);
+        errContainer.innerHTML = '';
+        await addToDatabase(name.value, selectedComics.value, favourite.checked);
     }
     await showHeroes(name.value, selectedComics.value);
 
@@ -78,7 +81,7 @@ async function addToDatabase(name, comics, favourite) {
         comics,
         favourite,
     }
-    controller('heroes', 'POST', body);
+    await controller('heroes', 'POST', body);
 }
 
 async function IsInDatabase(name) {
@@ -92,26 +95,30 @@ async function showHeroes() {
     tbody.innerHTML = '';
 
     const heroes = await controller('heroes');
-    heroes.forEach(hero => {
-        const checked = hero.favourite ? 'checked' : '';
-        tbody.innerHTML +=
-            `<tr>
-            <td>${hero.name}</td>
-            <td>${hero.comics}</td>
-            <td>
-                <label class="heroFavouriteInput">
-                    Favourite: <input id="${hero.id}" data-name="favourites" type="checkbox" ${checked}>
-                </label>
-            </td>
-            <td><button id="${hero.id}" data-name="deleteBtn">Delete</button></td>
-        </tr>`;
-    });
+    try {
+        heroes.forEach(hero => {
+            const checked = hero.favourite ? 'checked' : '';
+            tbody.innerHTML +=
+                `<tr>
+                <td>${hero.name}</td>
+                <td>${hero.comics}</td>
+                <td>
+                    <label class="heroFavouriteInput">
+                        Favourite: <input id="${hero.id}" data-name="favourites" type="checkbox" ${checked}>
+                    </label>
+                </td>
+                <td><button id="${hero.id}" data-name="deleteBtn">Delete</button></td>
+            </tr>`;
+        });
+    } catch (error) {
+        console.log(error);
+    }
     table.append(tbody);
 
     const deleteBtns = document.querySelectorAll('[data-name="deleteBtn"]');
     deleteBtns.forEach(deleteBtn => {
-        deleteBtn.addEventListener('click', () => {
-            deleteHero(deleteBtn.id);
+        deleteBtn.addEventListener('click', async () => {
+            await deleteHero(deleteBtn.id);
         });
     });
 }
@@ -120,3 +127,19 @@ async function deleteHero(heroId) {
     await controller(`heroes/${heroId}`, 'DELETE');
     showHeroes();
 }
+
+function showErrMssg() {
+    errContainer.innerHTML = '';
+
+    const err = 'This hero already exists.';
+    const errMssg = document.createElement('p');
+
+    errMssg.innerText = err;
+
+    errContainer.classList.add('error-container');
+    errMssg.classList.add('error-mssg');
+
+    errContainer.append(errMssg);
+    form.append(errContainer);
+}
+
