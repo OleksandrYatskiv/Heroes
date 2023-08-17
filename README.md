@@ -1,0 +1,1 @@
+# Rendering heroes from the mockAPI.
